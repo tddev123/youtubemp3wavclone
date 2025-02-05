@@ -1,8 +1,9 @@
+import os
+import random
 from flask import Flask, render_template, request, jsonify, send_file
 from views import views
 from yt_dlp import YoutubeDL
-import os
-import random
+import tempfile
 
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(views, url_prefix="/")
@@ -19,8 +20,32 @@ def get_random_user_agent():
     ]
     return random.choice(user_agents)
 
-def get_ydl_opts(format):
-    return {
+def create_temporary_cookie_file(cookie_content=None):
+    """
+    Create a temporary cookie file that will be automatically deleted after use.
+    
+    :param cookie_content: Optional string content for the cookie file
+    :return: Path to the temporary cookie file
+    """
+    try:
+        # Create a temporary file
+        fd, path = tempfile.mkstemp(suffix='.txt')
+        
+        # If cookie content is provided, write it to the file
+        if cookie_content:
+            with open(path, 'w') as temp_file:
+                temp_file.write(cookie_content)
+        
+        return path
+    except Exception as e:
+        print(f"Error creating temporary cookie file: {e}")
+        return None
+
+def get_ydl_opts(format, cookie_content=None):
+    # Create a temporary cookie file if content is provided
+    cookie_path = create_temporary_cookie_file(cookie_content)
+    
+    opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(downloads_path, '%(title)s.%(ext)s'),
         'postprocessors': [{
@@ -46,12 +71,17 @@ def get_ydl_opts(format):
         'logtostderr': True,
         'quiet': False,
         'no_warnings': False,
-        'cookiefile': 'cookies.txt',  # Direct use of cookies.txt file
         'verbose': True  # Add verbose output for debugging
     }
+    
+    # Add cookie file if a path was successfully created
+    if cookie_path:
+        opts['cookiefile'] = cookie_path
+    
+    return opts
 
-def download_from_url(url, format):
-    ydl_opts = get_ydl_opts(format)
+def download_from_url(url, format, cookie_content=None):
+    ydl_opts = get_ydl_opts(format, cookie_content)
     with YoutubeDL(ydl_opts) as ydl:
         try:
             info_dict = ydl.extract_info(url, download=True)
@@ -71,12 +101,13 @@ def download():
     data = request.get_json()
     url = data.get('url')
     format = data.get('format')
+    cookie_content = data.get('cookie_content')  # Optional cookie content
     
     if not url or not format:
         return jsonify({'error': 'No URL or format provided'}), 400
     
     try:
-        file_path, title, size, file_type = download_from_url(url, format)
+        file_path, title, size, file_type = download_from_url(url, format, cookie_content)
         size_mb = size / (1024 * 1024)
         return jsonify({'file_path': file_path, 'title': title, 'size': size_mb, 'type': file_type}), 200
     except Exception as e:
