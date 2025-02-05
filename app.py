@@ -6,7 +6,6 @@ import os
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(views, url_prefix="/")
 
-
 # Path to the Downloads folder
 downloads_path = r'C:/Users/lilbubba/Downloads'
 
@@ -38,13 +37,25 @@ def download():
     data = request.get_json()
     url = data.get('url')
     format = data.get('format')
+
+    # Extract cookies from request
+    cookies = request.cookies
+
     if not url or not format:
         return jsonify({'error': 'No URL or format provided'}), 400
+
+    # Log cookies for debugging (remove this in production)
+    print("User cookies:", cookies)
+
+    # Here, you can implement bot detection logic based on cookies.
+    # Example: Check for specific session cookies.
+    if not cookies or "session" not in cookies:
+        return jsonify({'error': 'Bot detection failed'}), 403
 
     try:
         file_path, title, size, file_type = download_from_url(url, format)
         size_mb = size / (1024 * 1024)  # Convert size to megabytes
-        return jsonify({'file_path': file_path, 'title': title, 'size': size_mb, 'type': file_type}), 200
+        return jsonify({'file_path': file_path, 'title': title, 'size': size_mb, 'type': file_type, 'cookies': cookies}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -58,10 +69,4 @@ def download_file():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
 
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
-    
