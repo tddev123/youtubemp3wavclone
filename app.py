@@ -1,5 +1,7 @@
 import os
 import random
+import sys
+import browser_cookie3
 from flask import Flask, render_template, request, jsonify, send_file
 from views import views
 from yt_dlp import YoutubeDL
@@ -11,6 +13,55 @@ app.register_blueprint(views, url_prefix="/")
 
 # Path to the Downloads folder
 downloads_path = r'C:/Users/lilbubba/Downloads'
+
+def extract_youtube_cookies():
+    """
+    Extract YouTube cookies from available browsers
+    
+    Attempts to extract cookies from multiple browsers in this order:
+    1. Chrome
+    2. Firefox
+    3. Edge
+    4. Safari (on macOS)
+    
+    :return: List of YouTube-related cookies
+    """
+    browsers = [
+        browser_cookie3.chrome,
+        browser_cookie3.firefox,
+        browser_cookie3.edge
+    ]
+    
+    # Attempt to extract cookies from different browsers
+    for browser_func in browsers:
+        try:
+            # Extract all cookies from YouTube domain
+            cookies = browser_func(domain_name='youtube.com')
+            
+            # Convert to list of dictionaries
+            cookie_list = []
+            for cookie in cookies:
+                cookie_dict = {
+                    'domain': cookie.domain,
+                    'name': cookie.name,
+                    'value': cookie.value,
+                    'path': cookie.path,
+                    'expires': int(cookie.expires.timestamp()) if cookie.expires else None,
+                    'secure': cookie.secure
+                }
+                cookie_list.append(cookie_dict)
+            
+            # If we found cookies, return them
+            if cookie_list:
+                print(f"Extracted {len(cookie_list)} cookies from {browser_func.__name__}")
+                return cookie_list
+        
+        except Exception as e:
+            print(f"Error extracting cookies from {browser_func.__name__}: {e}")
+    
+    # If no cookies found
+    print("No YouTube cookies found in any browser")
+    return []
 
 def create_netscape_cookie_file(cookies):
     """
@@ -31,7 +82,7 @@ def create_netscape_cookie_file(cookies):
             # domain \t FLAG \t path \t secure \t expires \t name \t value
             domain = cookie.get('domain', '.youtube.com')
             path = cookie.get('path', '/')
-            secure = cookie.get('secure', 'FALSE')
+            secure = str(cookie.get('secure', 'FALSE')).upper()
             expires = cookie.get('expires', default_expiration)
             name = cookie.get('name', '')
             value = cookie.get('value', '')
@@ -89,7 +140,7 @@ def get_ydl_opts(format, cookie_path=None):
         'logtostderr': True,
         'quiet': False,
         'no_warnings': False,
-        'verbose': True  # Add verbose output for debugging
+        'verbose': True
     }
     
     # Add cookie file if a path was provided
@@ -99,7 +150,11 @@ def get_ydl_opts(format, cookie_path=None):
     return opts
 
 def download_from_url(url, format, cookies=None):
-    # Create cookie file if cookies are provided
+    # If no cookies provided, try to extract from browsers
+    if not cookies:
+        cookies = extract_youtube_cookies()
+    
+    # Create cookie file if cookies are available
     cookie_path = create_netscape_cookie_file(cookies) if cookies else None
     
     # Get YoutubeDL options
@@ -123,11 +178,11 @@ def download_from_url(url, format, cookies=None):
 def download():
     data = request.get_json()
     url = data.get('url')
-    format = data.get('format')
-    cookies = data.get('cookies')  # List of cookie dictionaries
+    format = data.get('format', 'mp3')
+    cookies = data.get('cookies')  # Optional: allow manual cookie passing
     
-    if not url or not format:
-        return jsonify({'error': 'No URL or format provided'}), 400
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
     
     try:
         file_path, title, size, file_type = download_from_url(url, format, cookies)
