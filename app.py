@@ -3,12 +3,18 @@ from views import views
 from yt_dlp import YoutubeDL
 import os
 import random
+from pathlib import Path
 
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(views, url_prefix="/")
 
 # Path to the Downloads folder
 downloads_path = r'C:/Users/lilbubba/Downloads'
+
+def get_chrome_cookies_path():
+    # Windows path to Chrome cookies
+    username = os.getenv('USERNAME')
+    return os.path.join(r'C:', 'Users', username, 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'Network', 'Cookies')
 
 def get_random_user_agent():
     user_agents = [
@@ -48,8 +54,8 @@ def get_ydl_opts(format):
         'no_warnings': False,
         'default_search': 'auto',
         'source_address': '0.0.0.0',
-        'cookiesfrombrowser': ('chrome',),  # This will try to use your local Chrome cookies
-        'cookiefile': 'cookies.txt'  # Save cookies to a file
+        'cookiesfrombrowser': ('chrome', 'windows', get_chrome_cookies_path()),  # Specify Windows and the correct path
+        'cookiefile': 'cookies.txt'
     }
 
 def download_from_url(url, format):
