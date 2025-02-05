@@ -1,72 +1,51 @@
-from flask import Flask, render_template, request, jsonify, send_file
-from views import views
-from yt_dlp import YoutubeDL
 import os
+from yt_dlp import YoutubeDL
 
-app = Flask(__name__, template_folder='templates')
-app.register_blueprint(views, url_prefix="/")
+def download_youtube_to_mp3(url, download_folder='downloads',ffmpeg_path=None):
+    # Ensure the download folder exists
+    os.makedirs(download_folder, exist_ok=True)
 
-# Path to the Downloads folder
-downloads_path = r'C:/Users/lilbubba/Downloads'
-
-def get_ydl_opts(format):
-    return {
+    print("Converting Mp3 Audio \U0001F422");
+    
+    # Options for downloading
+    ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': os.path.join(downloads_path, '%(title)s.%(ext)s'),  # Save to Downloads with video title and correct extension
+        'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': format,
-            'preferredquality': '320'
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
         }],
+        'quiet': True,  # Make it less verbose
+        'noplaylist': True,  # Ensure we download a single video
     }
 
-def download_from_url(url, format):
-    ydl_opts = get_ydl_opts(format)
+    # Add ffmpeg_path if provided
+    if ffmpeg_path is not None:
+        ydl_opts['ffmpeg_location'] = ffmpeg_path
+    
+    # Download the video as an mp3 file
     with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict)
-        base, ext = os.path.splitext(file_path)
-        file_path = base + f'.{format}'
-        title = info_dict.get('title', 'output')
-        size = os.path.getsize(file_path)  # Get file size
-        file_type = format.upper()
-        return file_path, title, size, file_type
+        ydl.download([url])
+    
+    print("Download and conversion completed! \U0001F98B ")
 
-@app.route('/download', methods=['POST'])
-def download():
-    data = request.get_json()
-    url = data.get('url')
-    format = data.get('format')
+def main():
+    # Request user input for YouTube URL
+    url = input("Please paste the YouTube link: ").strip()
+    
+    # Request user input for the download directory
+    download_folder = input("Please paste the directory where you want to download the MP3 (default is 'downloads'): ").strip()
+    
+    # Use default directory if none provided
+    if not download_folder:
+        download_folder = 'downloads'
+    
+     # Define the ffmpeg path
+    ffmpeg_path = 'F:\\ffmpeg'  # Replace with your actual path
+    
+    # Download and convert the file
+    download_youtube_to_mp3(url, download_folder, ffmpeg_path)
 
-    # Extract cookies from request
-    cookies = request.cookies
-
-    if not url or not format:
-        return jsonify({'error': 'No URL or format provided'}), 400
-
-    # Log cookies for debugging (remove this in production)
-    print("User cookies:", cookies)
-
-    # Here, you can implement bot detection logic based on cookies.
-    # Example: Check for specific session cookies.
-    if not cookies or "session" not in cookies:
-        return jsonify({'error': 'Bot detection failed'}), 403
-
-    try:
-        file_path, title, size, file_type = download_from_url(url, format)
-        size_mb = size / (1024 * 1024)  # Convert size to megabytes
-        return jsonify({'file_path': file_path, 'title': title, 'size': size_mb, 'type': file_type, 'cookies': cookies}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/download-file', methods=['GET'])
-def download_file():
-    file_path = request.args.get('file_path')
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'File not found'}), 404
-
-    return send_file(file_path, as_attachment=True)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
+if __name__ == "__main__":
+    main()
