@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YouTube to Audio Downloader</title>
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: linear-gradient(135deg, #2e2c3b, #0c080c);
+        margin: 0;
+        color: #fff;
+      }
+      .container {
+        margin-left: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 100%;
+        position: relative;
+        text-align: center;
+      }
+      .container h1 {
+        margin-bottom: 20px;
+        font-size: 28px;
+        color: #000000;
+      
+        font-weight: 700;
+        background: linear-gradient(45deg, #000000, #000000);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .container input,
+      .container button {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 15px;
+        border: 1px solid #000000;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: border-color 0.1s, box-shadow 0.1s;
+      }
+      .container input:focus,
+      .container button:focus {
+        outline: none;
+        border-color: #00d2ff;
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+      }
+      .container button {
+        background-color: #c00043e4;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.1s;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 2);
+      }
+      .container button:hover {
+        background-color: #8300ab;
+        
+      }
+      .container select {
+        display: none; /* Hide the default select */
+      }
+      .custom-select {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        margin-bottom: 15px;
+      }
+      .select-selected {
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 16px;
+        font-weight:600;
+        cursor: pointer;
+        color: #333;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 2);
+        transition: border-color 0.1s, box-shadow 0.1s;
+      }
+      .select-selected:hover {
+        border-color: #00d2ff;
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+    
+      }
+      .select-items {
+        position: absolute;
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-top: none;
+        z-index: 99;
+        width: 100%;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 2);
+        display: none;
+        border-radius: 10px;
+        overflow: hidden;
+      
+        
+      }
+      .select-items div {
+        padding: 12px;
+        cursor: pointer;
+        font-size: 16px;
+        color: #333;
+        transition: background-color 0.1s;
+      }
+      .select-items div:hover {
+    
+        color: #0099bb;
+        border: #00d2ff;
+        border-radius: 20px;
+        background-color: #d0ebf1;
+       
+       
+      }
+      .select-items.select-show {
+        display: block;
+       
+      }
+      .message {
+        margin-top: 20px;
+        font-weight: bold;
+        color: #333;
+        text-align: center;
+      }
+      .download-button {
+        margin-top: 20px;
+        display: none;
+       
+      }
+      .download-button p {
+        margin: 5px 0;
+        color: #333;
+      }
+      .art {
+        position: absolute;
+        top: 50%;
+        left: 1%;
+        background: #ddd;
+        font-size: xx-large;
+        
+      }
+      .art:hover a {
+        color: darkgoldenrod;
+      }
+      .quality {
+       font-size: large;
+        position: absolute;
+        top: 2%;
+        right: 28%;
+      }
+
+
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>YouTube to Audio Downloader</h1>
+      <input type="text"  id="url" placeholder="Enter YouTube URL" />
+      <div class="custom-select">
+        <div class="select-selected">MP3 or WAV ?</div>
+        <div class="select-items select-hide">
+          <div data-value="wav">WAV</div>
+          <div data-value="mp3">MP3</div>
+        </div>
+      </div>
+      <button onclick="download()">Download</button>
+      <div class="message" id="message"></div>
+      <div class="download-button" id="download-button">
+        <p id="video-title"></p>
+        <p id="file-size"></p>
+        <p id="file-type"></p>
+        <button onclick="downloadFile()">Download File</button>
+      </div>
+    </div>
+
+    <div class="art">
+      <a href="https://www.postermywall.com/index.php/g/album-covers/all?safe_content=safe">Best Song Artwork Website </a>
+    </div>
+    <div class="quality"><h1>WAV is higher quality than MP3</h1></div>
+
+    <script>
+      let filePath = "";
+      const selected = document.querySelector(".select-selected");
+      const items = document.querySelector(".select-items");
+      const selectItems = document.querySelectorAll(".select-items div");
+
+      document
+        .querySelector(".select-selected")
+        .addEventListener("click", function () {
+          items.classList.toggle("select-show");
+        });
+
+      selectItems.forEach((item) => {
+        item.addEventListener("click", function () {
+          selected.textContent = this.textContent;
+          selected.setAttribute("data-value", this.getAttribute("data-value"));
+          items.classList.remove("select-show");
+        });
+      });
+
+      async function download() {
+        const url = document.getElementById("url").value;
+        const format = selected.getAttribute("data-value");
+        const messageDiv = document.getElementById("message");
+        const downloadButtonDiv = document.getElementById("download-button");
+        const videoTitle = document.getElementById("video-title");
+        const fileSize = document.getElementById("file-size");
+        const fileType = document.getElementById("file-type");
+
+        messageDiv.textContent = "Downloading...";
+
+        try {
+          const response = await fetch("/download", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url, format }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            filePath = result.file_path;
+            videoTitle.textContent = "Video Title: " + result.title;
+            fileSize.textContent =
+              "File Size: " + result.size.toFixed(2) + " MB";
+            fileType.textContent = "File Type: " + result.type;
+            downloadButtonDiv.style.display = "block";
+            messageDiv.textContent = "File ready for download.";
+          } else {
+            messageDiv.textContent = "Error: " + result.error;
+          }
+        } catch (error) {
+          messageDiv.textContent = "Network Error: " + error.message;
+        }
+      }
+
+      function downloadFile() {
+        if (filePath) {
+          window.location.href = `/download-file?file_path=${encodeURIComponent(
+            filePath
+          )}`;
+        }
+      }
+
+      document.addEventListener("click", function (e) {
+        if (!document.querySelector(".custom-select").contains(e.target)) {
+          items.classList.remove("select-show");
+        }
+      });
+    </script>
+  </body>
+</html>
