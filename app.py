@@ -6,19 +6,25 @@ import os
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(views, url_prefix="/")
 
-
 # Path to the Downloads folder
 downloads_path = r'C:/Users/lilbubba/Downloads'
 
 def get_ydl_opts(format):
     return {
         'format': 'bestaudio/best',
-        'outtmpl': os.path.join(downloads_path, '%(title)s.%(ext)s'),  # Save to Downloads with video title and correct extension
+        'outtmpl': os.path.join(downloads_path, '%(title)s.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': format,
             'preferredquality': '320'
         }],
+        # Add user agent configuration
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Sec-Fetch-Mode': 'navigate',
+        }
     }
 
 def download_from_url(url, format):
@@ -38,9 +44,10 @@ def download():
     data = request.get_json()
     url = data.get('url')
     format = data.get('format')
+    
     if not url or not format:
         return jsonify({'error': 'No URL or format provided'}), 400
-
+    
     try:
         file_path, title, size, file_type = download_from_url(url, format)
         size_mb = size / (1024 * 1024)  # Convert size to megabytes
@@ -53,15 +60,7 @@ def download_file():
     file_path = request.args.get('file_path')
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'File not found'}), 404
-
     return send_file(file_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
-
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
-    
