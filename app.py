@@ -3,32 +3,12 @@ from views import views
 from yt_dlp import YoutubeDL
 import os
 import random
-import getpass
 
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(views, url_prefix="/")
 
 # Path to the Downloads folder
 downloads_path = r'C:/Users/lilbubba/Downloads'
-
-def get_chrome_cookies_path():
-    try:
-        # Try to get username multiple ways
-        username = getpass.getuser()  # More reliable than env variable
-        base_path = rf'C:\Users\{username}\AppData\Local\Google\Chrome\User Data'
-        
-        # Check for different possible profile paths
-        profiles = ['Default', 'Profile 1', 'Profile 2']
-        for profile in profiles:
-            cookie_path = os.path.join(base_path, profile, 'Network', 'Cookies')
-            if os.path.exists(cookie_path):
-                return cookie_path
-                
-        # If no profile found, return Default path anyway
-        return os.path.join(base_path, 'Default', 'Network', 'Cookies')
-    except Exception as e:
-        print(f"Error getting Chrome cookies path: {e}")
-        return None
 
 def get_random_user_agent():
     user_agents = [
@@ -40,8 +20,7 @@ def get_random_user_agent():
     return random.choice(user_agents)
 
 def get_ydl_opts(format):
-    cookie_path = get_chrome_cookies_path()
-    opts = {
+    return {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(downloads_path, '%(title)s.%(ext)s'),
         'postprocessors': [{
@@ -64,18 +43,12 @@ def get_ydl_opts(format):
         },
         'nocheckcertificate': True,
         'ignoreerrors': False,
-        'logtostderr': False,
+        'logtostderr': True,
         'quiet': False,
         'no_warnings': False,
-        'default_search': 'auto',
-        'source_address': '0.0.0.0'
+        'cookiefile': 'cookies.txt',  # Direct use of cookies.txt file
+        'verbose': True  # Add verbose output for debugging
     }
-    
-    # Only add cookie options if we found a valid cookie path
-    if cookie_path and os.path.exists(cookie_path):
-        opts['cookiesfrombrowser'] = ('chrome', 'windows', cookie_path)
-    
-    return opts
 
 def download_from_url(url, format):
     ydl_opts = get_ydl_opts(format)
